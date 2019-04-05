@@ -20,11 +20,4 @@ public class Main {
 
     }
 
-
-    public void jackpot() {
-        System.out.println("Vergil: Dont dare to say...");
-        System.out.println("Dante: JACKPOT!");
-    }
-
-
 }
