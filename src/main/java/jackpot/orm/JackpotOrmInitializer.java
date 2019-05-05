@@ -18,7 +18,6 @@ public class JackpotOrmInitializer {
     volatile private List<String> PACKAGES_TO_SCAN;
     private final EntityProcessor entityProcessor = new EntityProcessor();
     private final JackpotTableSqlGenerator jackpotTableSqlGenerator = new JackpotTableSqlGenerator();
-    private final JackpotRelationSqlGenerator jackpotRelationSqlGenerator = new JackpotRelationSqlGenerator();
     private final JackpotDropTableService jackpotDropTableService = new JackpotDropTableService();
 
     volatile private boolean running = false;
@@ -150,7 +149,7 @@ public class JackpotOrmInitializer {
         jackpotDropTableService.dropTables(allTables);
     }
 
-    private void createDatabase() throws SQLException {
+    private void createDatabase() {
 
         ConnectionManager connectionManager = ConnectionManager.createNew();
 
@@ -159,9 +158,13 @@ public class JackpotOrmInitializer {
             connectionManager.executeSql(sql);
         });
 
-        allRelations.forEach(realtionMetadata -> {
-            String sql = jackpotRelationSqlGenerator.createSql(realtionMetadata);
-            connectionManager.executeSql(sql);
+        final JackpotRelationSqlGenerator jackpotRelationSqlGenerator = new JackpotRelationSqlGenerator(allTables);
+        allRelations.forEach(relationMetadata -> {
+            String sql = jackpotRelationSqlGenerator.createSql(relationMetadata);
+            Arrays.asList(sql.split(";")).forEach(oneQuery -> {
+                connectionManager.executeSql(oneQuery + ";");
+            });
+
         });
 
         connectionManager.close();

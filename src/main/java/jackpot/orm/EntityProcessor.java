@@ -5,24 +5,34 @@ import jackpot.orm.metadata.ColumnType;
 import jackpot.orm.metadata.RelationMetadata;
 import jackpot.orm.metadata.TableMetadata;
 import jackpot.utils.AnnotationUtils;
-import jackpot.utils.Utils;
+import jackpot.utils.JackpotUtils;
 import lombok.Getter;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
+import javax.persistence.*;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class EntityProcessor {
 
+    private final static List<String> standardTypes = Arrays.asList(String.class.getName(),
+            Integer.class.getName(),
+            Enum.class.getName(),
+            LocalDate.class.getName(),
+            LocalDateTime.class.getName());
+
+    private final static List<Class<? extends Annotation>> relationAnnotations =
+            Arrays.asList(OneToMany.class,
+                    ManyToOne.class,
+                    ManyToMany.class);
 
     @Getter
     private List<RelationMetadata> relations = new LinkedList();
+    private final RelationProcessor relationProcessor = new RelationProcessor();
 
     TableMetadata process(Class<?> cl, Entity entityAnnotation) {
         String tableName = getTableName(cl, entityAnnotation);
@@ -34,26 +44,63 @@ public class EntityProcessor {
     }
 
     private String getTableName(Class<?> cl, Entity entityAnnotation) {
-        if (!Utils.isBlank(entityAnnotation.name()))
-            return entityAnnotation.name();
-
-        return cl.getSimpleName();
+        return JackpotUtils.getTableName(cl, entityAnnotation);
     }
 
     private List<ColumnMetadata> createColumnsMetadata(Class<?> cl, Entity entityAnnotation) {
 
-        return Stream.of(cl.getDeclaredFields()).map(field -> {
-                    Optional<Column> annotationColumn = Optional.ofNullable(field.getAnnotation(Column.class));
+        processRelations(cl, entityAnnotation);
 
-                    return ColumnMetadata.builder()
-                            .columnName(getColumnName(field, annotationColumn))
-                            .columnType(toColumnType(field.getType()))
-                            .primaryKey(AnnotationUtils.isAnnotatedBy(field, Id.class))
-                            .notNull(annotationColumn.isPresent() ? !annotationColumn.get().nullable() : false)
-                            .build();
-                }
-        )
+        return Stream.of(cl.getDeclaredFields())
+                .filter(field -> !isObjectField(field))
+                .map(field -> {
+                            Optional<Column> annotationColumn = Optional.ofNullable(field.getAnnotation(Column.class));
+
+                            return ColumnMetadata.builder()
+                                    .columnName(getColumnName(field, annotationColumn))
+                                    .columnType(toColumnType(field.getType()))
+                                    .primaryKey(AnnotationUtils.isAnnotatedBy(field, Id.class))
+                                    .notNull(annotationColumn.isPresent() ? !annotationColumn.get().nullable() : false)
+                                    .build();
+                        }
+                ).collect(Collectors.toList());
+    }
+
+    private void processRelations(Class<?> cl, Entity entityAnnotation) {
+        List<Field> objectFields = Stream.of(cl.getDeclaredFields())
+                .filter(field -> isObjectField(field))
                 .collect(Collectors.toList());
+
+        if (!objectFields.isEmpty()) {
+            List<Field> withoutRelations = objectFields.stream()
+                    .filter(field -> !hasRelationAnnotations(field))
+                    .collect(Collectors.toList());
+
+            if (!withoutRelations.isEmpty()) {
+                StringJoiner msgBuf = new StringJoiner("\n");
+                msgBuf.add("Following fields are objects without relations: ");
+                withoutRelations.forEach(field -> msgBuf.add(String.format("%s %s", cl.getName(), field.getName())));
+
+                throw new IllegalStateException(msgBuf.toString());
+            }
+
+            List<Field> withRelations = objectFields.stream()
+                    .filter(field -> hasRelationAnnotations(field))
+                    .collect(Collectors.toList());
+
+            relations.addAll(relationProcessor.process(cl, entityAnnotation, withRelations));
+        }
+    }
+
+    private boolean isObjectField(Field field) {
+        return !standardTypes.contains(field.getType().getName());
+    }
+
+    private boolean hasRelationAnnotations(Field field) {
+
+        return Stream.of(field.getDeclaredAnnotations())
+                .map(ann -> ann.annotationType())
+                .anyMatch(annClass -> relationAnnotations.contains(annClass));
     }
 
     private ColumnType toColumnType(Class<?> type) {
@@ -64,7 +111,7 @@ public class EntityProcessor {
         }
     }
 
-    private ColumnType convertToColumnType(Class<?> type) throws IllegalAccessException, InstantiationException {
+    private ColumnType convertToColumnType(Class<?> type) {
         // TODO sprawdzenie mozliwych konwerterow i ew zwrot wyniku
 
         if (Integer.class.getName().equals(type.getName()))
@@ -73,14 +120,11 @@ public class EntityProcessor {
         if (String.class.getName().equals(type.getName()))
             return ColumnType.STRING;
 
-        throw new IllegalStateException("ColumnConvertionError There is no cnverter for type " + type.getName());
+        throw new IllegalStateException("ColumnConvertionError There is no converter for type " + type.getName());
     }
 
     private String getColumnName(Field field, Optional<Column> annotationColumn) {
-        if (annotationColumn.isPresent() && !Utils.isBlank(annotationColumn.get().name()))
-            return annotationColumn.get().name();
-
-        return field.getName();
+        return JackpotUtils.getColumnName(field, annotationColumn);
     }
 
 }

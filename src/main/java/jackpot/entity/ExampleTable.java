@@ -15,4 +15,6 @@ public class ExampleTable {
     Integer intCol;
     Integer testCol;
 
+    @OneToMany
+    GroupExampleTable groupExampleTable;
 }

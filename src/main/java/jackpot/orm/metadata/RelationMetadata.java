@@ -10,7 +10,11 @@ public class RelationMetadata {
     RelationType type;
 
     String targetColumnName;
+    String targetTableName;
 
     String sourceColumnName;
     String sourceTableName;
+
+    boolean targetColumnNotNull;
+
 }

@@ -3,6 +3,7 @@ package jackpot.orm;
 import jackpot.orm.metadata.ColumnMetadata;
 import jackpot.orm.metadata.ColumnType;
 import jackpot.orm.metadata.TableMetadata;
+import jackpot.utils.JackpotUtils;
 
 import java.util.StringJoiner;
 
@@ -24,15 +25,7 @@ public class JackpotTableSqlGenerator {
     }
 
     private String toSqlType(ColumnType columnType) {
-        switch (columnType) {
-
-            case STRING:
-                return "text";
-            case INTEGER:
-                return "integer";
-        }
-
-        throw new IllegalStateException("There is no sql type for " + columnType.name());
+        return JackpotUtils.toSqlType(columnType);
     }
 
     private String generateColumnConstraints(ColumnMetadata col) {

@@ -11,7 +11,7 @@ public class JackpotDropTableService {
         ConnectionManager connectionManager = ConnectionManager.createNew();
 
         tables.forEach(table -> {
-            String sql = String.format("DROP TABLE %s;", table.getTableName());
+            String sql = String.format("DROP TABLE IF EXISTS %s;", table.getTableName());
             connectionManager.executeSql(sql);
         });
 

@@ -2,7 +2,6 @@ package jackpot.orm;
 
 import jackpot.orm.properties.JackpotOrmProperties;
 
-import javax.sql.ConnectionPoolDataSource;
 import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -33,7 +32,6 @@ public class ConnectionManager implements Closeable {
     }
 
     public void executeSql(String sql) {
-
         try {
             this.connection.createStatement().execute(sql);
         } catch (SQLException e) {
