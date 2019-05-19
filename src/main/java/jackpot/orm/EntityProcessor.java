@@ -38,6 +38,8 @@ public class EntityProcessor {
         String tableName = getTableName(cl, entityAnnotation);
 
         return TableMetadata.builder()
+                .className(cl.getName())
+                .tableClass(cl)
                 .tableName(tableName)
                 .columns(createColumnsMetadata(cl, entityAnnotation))
                 .build();
@@ -57,6 +59,7 @@ public class EntityProcessor {
                             Optional<Column> annotationColumn = Optional.ofNullable(field.getAnnotation(Column.class));
 
                             return ColumnMetadata.builder()
+                                    .fieldName(field.getName())
                                     .columnName(getColumnName(field, annotationColumn))
                                     .columnType(toColumnType(field.getType()))
                                     .primaryKey(AnnotationUtils.isAnnotatedBy(field, Id.class))

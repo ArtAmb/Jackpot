@@ -1,8 +1,19 @@
 package jackpot;
 
+import jackpot.entity.ExampleRepo;
+import jackpot.entity.ExampleTable;
+import jackpot.orm.JackpotRepositoryFactory;
 import jackpot.orm.aop.JackpotOrmEnable;
 
 public class Main {
+
+    ExampleRepo exampleRepo = JackpotRepositoryFactory.createRepository(ExampleRepo.class);
+
+    public void doSth() {
+        ExampleTable[] res = exampleRepo.findByIntCol(10);
+
+        System.out.println("res == " + res);
+    }
 
     @JackpotOrmEnable
     public static void main(String[] args) {
@@ -17,7 +28,7 @@ public class Main {
 
 
 //        new jackpot.Main().jackpot();
-
+        new Main().doSth();
     }
 
 }

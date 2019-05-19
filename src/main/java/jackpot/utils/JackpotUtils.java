@@ -9,11 +9,22 @@ import java.util.Optional;
 
 public class JackpotUtils {
 
+    public static String getTableName(Class<?> cl) {
+        Entity entityAnnotation = cl.getAnnotation(Entity.class);
+        Utils.assertNotNull(entityAnnotation, String.format("Class %s is not an ENTITY ", cl.getName()));
+
+        return getTableName(cl, entityAnnotation);
+    }
+
     public static String getTableName(Class<?> cl, Entity entityAnnotation) {
         if (!Utils.isBlank(entityAnnotation.name()))
             return entityAnnotation.name();
 
         return cl.getSimpleName();
+    }
+
+    public static String getColumnName(Field field) {
+        return getColumnName(field, Optional.ofNullable(field.getAnnotation(Column.class)));
     }
 
     public static String getColumnName(Field field, Optional<Column> annotationColumn) {
@@ -23,7 +34,7 @@ public class JackpotUtils {
         return field.getName();
     }
 
-    public static  String toSqlType(ColumnType columnType) {
+    public static String toSqlType(ColumnType columnType) {
         switch (columnType) {
 
             case STRING:

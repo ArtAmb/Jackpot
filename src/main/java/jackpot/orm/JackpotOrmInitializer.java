@@ -4,11 +4,17 @@ import jackpot.orm.metadata.RelationMetadata;
 import jackpot.orm.metadata.TableMetadata;
 import jackpot.orm.properties.DatabaseInitAction;
 import jackpot.orm.properties.JackpotOrmProperties;
+import jackpot.orm.repository.JackpotQueryExecutor;
+import jackpot.orm.repository.JackpotRepository;
+import jackpot.orm.repository.JackpotRepositoryMetadata;
 import org.reflections.Reflections;
 
 import javax.persistence.Entity;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -19,6 +25,7 @@ public class JackpotOrmInitializer {
     private final EntityProcessor entityProcessor = new EntityProcessor();
     private final JackpotTableSqlGenerator jackpotTableSqlGenerator = new JackpotTableSqlGenerator();
     private final JackpotDropTableService jackpotDropTableService = new JackpotDropTableService();
+    private final JackpotQueryExecutor jackpotQueryExecutor = new JackpotQueryExecutor();
 
     volatile private boolean running = false;
 
@@ -53,12 +60,26 @@ public class JackpotOrmInitializer {
 
         handleDatabaseInitAction();
 
-//        StackTraceElement[] stack = Thread.currentThread().getStackTrace();
-//
-//        for (StackTraceElement one : stack) {
-//            System.out.println(String.format("%s %s %s", one.getFileName(), one.getClassName(), one.getMethodName()));
-//        }
+        JackpotDatabase.init(allTables);
 
+        createInterfaceImpl();
+    }
+
+    private void createInterfaceImpl() {
+        Reflections ref = new Reflections(PACKAGES_TO_SCAN);
+        Set<Class<? extends JackpotRepository>> allRepositories = ref.getSubTypesOf(JackpotRepository.class);
+        Class<?>[] allReposArray = allRepositories.toArray(new Class<?>[allRepositories.size()]);
+        JackpotRepositoryMetadataContainer.loadRepos(allReposArray);
+
+        Object proxyImpl = Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(), allReposArray, (proxy, method, args) -> {
+
+            System.out.println("PROXY CLASS == " + method.getDeclaringClass().getName());
+            String methodName = method.getName();
+            JackpotRepositoryMetadata repoMetadata = JackpotRepositoryMetadataContainer.getRepoMetadata(method.getDeclaringClass().getName());
+            return jackpotQueryExecutor.execute(methodName, repoMetadata.getTableClass().getName(), args);
+        });
+
+        JackpotRepositoryFactory.load(proxyImpl);
     }
 
     private void loadPackagesToScan() throws ClassNotFoundException {
@@ -113,7 +134,7 @@ public class JackpotOrmInitializer {
     }
 
 
-    private void initDatabase() throws IllegalAccessException, InstantiationException {
+    private void initDatabase() {
         Reflections ref = new Reflections(PACKAGES_TO_SCAN);
         for (Class<?> cl : ref.getTypesAnnotatedWith(Entity.class)) {
             Entity entity = cl.getAnnotation(Entity.class);

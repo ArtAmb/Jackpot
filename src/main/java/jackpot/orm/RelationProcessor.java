@@ -7,6 +7,7 @@ import jackpot.utils.JackpotUtils;
 
 import javax.persistence.*;
 import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -18,11 +19,11 @@ public class RelationProcessor {
             return fieldsWithRelations.stream().map(field -> {
                 Optional<Column> annotationColumn = Optional.ofNullable(field.getAnnotation(Column.class));
 
-
                 return RelationMetadata.builder()
+                        .targetFieldName(field.getName())
                         .targetColumnName(JackpotUtils.getColumnName(field, annotationColumn))
                         .targetTableName(JackpotUtils.getTableName(ownerClass, ownerEntityAnnotation))
-                        .sourceColumnName(null)
+                        .sourceColumnName(getSourceColumnName(field))
                         .sourceTableName(getSourceTableName(field))
                         .type(getRelationType(field))
                         .targetColumnNotNull(annotationColumn.isPresent() ? !annotationColumn.get().nullable() : false)
@@ -41,6 +42,20 @@ public class RelationProcessor {
             throw new IllegalStateException(String.format("%s is not an ENTITY ", fieldClass.getName()));
 
         return JackpotUtils.getTableName(fieldClass, fieldEntityAnnotation);
+    }
+
+    private String getSourceColumnName(Field field) {
+//        if(isAnnotateBy sth)
+//            return customFk;
+
+        Class<?> fieldClass = field.getType();
+
+        Field pkField = Arrays.stream(fieldClass.getDeclaredFields())
+                .filter(fi -> AnnotationUtils.isAnnotatedBy(fi, Id.class))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("There is no PK for " + fieldClass.getName()));
+
+        return JackpotUtils.getColumnName(pkField);
     }
 
     private RelationType getRelationType(Field field) {

@@ -9,6 +9,7 @@ public class RelationMetadata {
 
     RelationType type;
 
+    String targetFieldName;
     String targetColumnName;
     String targetTableName;
 

@@ -1,15 +1,20 @@
 package jackpot.orm;
 
+import com.google.gson.Gson;
 import jackpot.orm.properties.JackpotOrmProperties;
+import lombok.val;
+import org.apache.commons.dbutils.QueryRunner;
+import org.apache.commons.dbutils.handlers.MapListHandler;
 
 import java.io.Closeable;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class ConnectionManager implements Closeable {
     private final Connection connection;
+    private final QueryRunner queryRunner = new QueryRunner();
+    private final Gson gson = new Gson();
 
 
     public static ConnectionManager createNew() {
@@ -39,10 +44,17 @@ public class ConnectionManager implements Closeable {
         }
     }
 
-    public ResultSet executeQuery(String sql) {
+    public Object executeQuery(String sql, Class<?> responseClass) {
         try {
-            return this.connection.createStatement().executeQuery(sql);
+            val resultMap = queryRunner.query(this.connection, sql, new MapListHandler());
+            String resultJson = gson.toJson(resultMap);
+            Class<?> arrayClass = Class.forName("[L" + responseClass.getName() + ";");
+
+            return gson.fromJson(resultJson, arrayClass);
+
         } catch (SQLException e) {
+            throw new IllegalStateException(e);
+        } catch (ClassNotFoundException e) {
             throw new IllegalStateException(e);
         }
     }

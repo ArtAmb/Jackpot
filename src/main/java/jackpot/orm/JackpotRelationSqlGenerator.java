@@ -1,6 +1,7 @@
 package jackpot.orm;
 
 import jackpot.orm.metadata.ColumnMetadata;
+import jackpot.orm.metadata.ForeignKeyRelation;
 import jackpot.orm.metadata.RelationMetadata;
 import jackpot.orm.metadata.TableMetadata;
 import jackpot.utils.JackpotUtils;
@@ -26,20 +27,21 @@ public class JackpotRelationSqlGenerator {
             case MANY_TO_MANY:
                 break;
             case ONE_TO_MANY:
-                return generateOneToManyRelationSQL(relationMetadata);
-            case MANY_TO_ONE:
                 break;
+            case MANY_TO_ONE:
+                return generateManyToOneRelationSQL(relationMetadata);
         }
 
 
         throw new IllegalStateException("Unrecognized relation type " + relationMetadata.getType());
     }
 
-    private String generateOneToManyRelationSQL(RelationMetadata relationMetadata) {
+    private String generateManyToOneRelationSQL(RelationMetadata relationMetadata) {
         StringBuffer sqlBuf = new StringBuffer();
 
         TableMetadata sourceTable = allTablesMapByName.get(relationMetadata.getSourceTableName());
         Utils.assertNotNull(sourceTable, relationMetadata.getSourceTableName() + " not found");
+        TableMetadata targetTable = allTablesMapByName.get(relationMetadata.getTargetTableName());
 
         ColumnMetadata sourceColumn = getSourceColumn(sourceTable, relationMetadata);
 
@@ -48,6 +50,20 @@ public class JackpotRelationSqlGenerator {
                 relationMetadata.getTargetColumnName(),
                 JackpotUtils.toSqlType(sourceColumn.getColumnType()),
                 relationMetadata.isTargetColumnNotNull() ? " NOT NULL" : ""));
+
+        targetTable.getColumns().add(ColumnMetadata.builder()
+                .fieldName(relationMetadata.getTargetFieldName())
+                .columnName(relationMetadata.getTargetColumnName())
+                .notNull(relationMetadata.isTargetColumnNotNull())
+                .columnType(sourceColumn.getColumnType())
+                .primaryKey(false)
+                .foreignKeyRelation(ForeignKeyRelation.builder()
+                        .tableName(relationMetadata.getSourceTableName())
+                        .columnName(relationMetadata.getSourceColumnName())
+                        .type(relationMetadata.getType())
+                        .build())
+                .build());
+
 
         sqlBuf.append(String.format("ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s);",
                 relationMetadata.getTargetTableName(),

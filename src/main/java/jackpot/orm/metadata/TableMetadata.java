@@ -11,7 +11,9 @@ import java.util.List;
 @Value
 public class TableMetadata {
 
+    String className;
     String tableName;
+    Class<?> tableClass;
 
     List<ColumnMetadata> columns;
 
@@ -22,7 +24,7 @@ public class TableMetadata {
     }
 
     public ColumnMetadata getColumn(String name) {
-        Utils.assertIfTrue(Utils.isBlank(name), "Column name cannot be blank");
+        Utils.assertIfTrue(!Utils.isBlank(name), "Column name cannot be blank");
 
         return columns.stream().filter(col -> col.getColumnName().equals(name)).findFirst()
                 .orElseThrow(()
