@@ -7,13 +7,12 @@ import jackpot.orm.properties.JackpotOrmProperties;
 import jackpot.orm.repository.JackpotQueryExecutor;
 import jackpot.orm.repository.JackpotRepository;
 import jackpot.orm.repository.JackpotRepositoryMetadata;
+import jackpot.orm.repository.JackpotSaveExecutor;
 import org.reflections.Reflections;
 
 import javax.persistence.Entity;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.sql.SQLException;
 import java.util.*;
@@ -26,6 +25,7 @@ public class JackpotOrmInitializer {
     private final JackpotTableSqlGenerator jackpotTableSqlGenerator = new JackpotTableSqlGenerator();
     private final JackpotDropTableService jackpotDropTableService = new JackpotDropTableService();
     private final JackpotQueryExecutor jackpotQueryExecutor = new JackpotQueryExecutor();
+    private final JackpotSaveExecutor jackpotSaveExecutor = new JackpotSaveExecutor();
 
     volatile private boolean running = false;
 
@@ -47,7 +47,7 @@ public class JackpotOrmInitializer {
     }
 
 
-    public void init() throws ClassNotFoundException, InstantiationException, IllegalAccessException, SQLException {
+    public void init() throws ClassNotFoundException, SQLException {
         if (running) {
             return;
         }
@@ -75,7 +75,14 @@ public class JackpotOrmInitializer {
 
             System.out.println("PROXY CLASS == " + method.getDeclaringClass().getName());
             String methodName = method.getName();
+            if (methodName.equals("toString")) {
+                return method.getDeclaringClass().getName();
+            }
             JackpotRepositoryMetadata repoMetadata = JackpotRepositoryMetadataContainer.getRepoMetadata(method.getDeclaringClass().getName());
+
+            if (methodName.equals("save"))
+                return jackpotSaveExecutor.execute(args[0].getClass().getName(), args[0]);
+
             return jackpotQueryExecutor.execute(methodName, repoMetadata.getTableClass().getName(), args);
         });
 
@@ -145,7 +152,7 @@ public class JackpotOrmInitializer {
         allRelations.addAll(entityProcessor.getRelations());
     }
 
-    private void handleDatabaseInitAction() throws SQLException {
+    private void handleDatabaseInitAction() {
         DatabaseInitAction databaseInitAction = JackpotOrmProperties.getDatabaseInitAction();
 
         if (databaseInitAction == null)

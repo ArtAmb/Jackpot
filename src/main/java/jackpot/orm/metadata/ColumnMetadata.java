@@ -17,4 +17,7 @@ public class ColumnMetadata {
     boolean primaryKey;
 
     ForeignKeyRelation foreignKeyRelation;
+
+    @Builder.Default
+    String defaultValue = "NULL";
 }

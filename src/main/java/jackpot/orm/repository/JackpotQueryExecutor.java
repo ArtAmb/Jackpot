@@ -2,6 +2,7 @@ package jackpot.orm.repository;
 
 import jackpot.orm.ConnectionManager;
 import jackpot.orm.JackpotDatabase;
+import jackpot.orm.JackpotLogger;
 import jackpot.orm.metadata.ColumnMetadata;
 import jackpot.orm.metadata.RelationType;
 import jackpot.orm.metadata.TableMetadata;
@@ -17,6 +18,8 @@ public class JackpotQueryExecutor {
         ConnectionManager connectionManager = ConnectionManager.createNew();
 
         String sql = generateSql(tableMetadata, queryString, arguments);
+        JackpotLogger.log(sql);
+
         Object result = connectionManager.executeQuery(sql, tableMetadata.getTableClass());
         connectionManager.close();
 
@@ -24,7 +27,7 @@ public class JackpotQueryExecutor {
     }
 
     private TableMetadata getTableMetadata(String responseClassName) {
-        return JackpotDatabase.getInstance().getTable(responseClassName);
+        return JackpotDatabase.getInstance().getTableByClassName(responseClassName);
     }
 
     private String generateSql(TableMetadata tableMetadata, String queryString, Object... arguments) {
@@ -68,7 +71,7 @@ public class JackpotQueryExecutor {
 
         StringBuffer strBuf = new StringBuffer();
         fks.forEach(fk -> {
-            strBuf.append(String.format(" JOIN %s %s ON %s.%s = %s.%s ",
+            strBuf.append(String.format(" LEFT JOIN %s %s ON %s.%s = %s.%s ",
                     fk.getForeignKeyRelation().getTableName(),
                     fk.getForeignKeyRelation().getTableName(),
                     tablePrefix,

@@ -11,6 +11,7 @@ public class JackpotDatabase {
     private static JackpotDatabase instance;
 
     private final Map<String, TableMetadata> allTablesMapByClassName;
+    private final Map<String, TableMetadata> allTablesMapByTableName;
 
 
     synchronized public static void init(List<TableMetadata> allTables) {
@@ -28,14 +29,22 @@ public class JackpotDatabase {
     private JackpotDatabase(List<TableMetadata> allTables) {
         allTablesMapByClassName = allTables.stream()
                 .collect(Collectors.toMap(table -> table.getClassName(), table -> table));
+        allTablesMapByTableName =  allTables.stream()
+                .collect(Collectors.toMap(table -> table.getTableName(), table -> table));
     }
 
-    public TableMetadata getTable(String className) {
+    public TableMetadata getTableByClassName(String className) {
         TableMetadata table = allTablesMapByClassName.get(className);
         Utils.assertNotNull(table, String.format("Table for class %s does not exist", className));
 
         return table;
     }
 
+    public TableMetadata getTableByTableName(String tableName) {
+        TableMetadata table = allTablesMapByClassName.get(tableName);
+        Utils.assertNotNull(table, String.format("Table for table name %s does not exist", tableName));
+
+        return table;
+    }
 
 }

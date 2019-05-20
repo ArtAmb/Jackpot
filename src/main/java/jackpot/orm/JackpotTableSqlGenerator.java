@@ -32,7 +32,7 @@ public class JackpotTableSqlGenerator {
         StringBuffer stringBuffer = new StringBuffer("");
 
         if (col.isPrimaryKey())
-            return "PRIMARY KEY";
+            return " AUTO_INCREMENT PRIMARY KEY";
 
         if (col.isNotNull())
             stringBuffer.append(" NOT NULL ");
