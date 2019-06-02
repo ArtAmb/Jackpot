@@ -19,21 +19,18 @@ public class Main {
                 .intCol(10)
                 .stringCol("Test")
                 .testCol(741)
-                .groupExampleTable(null)
                 .build();
         ExampleTable table1 = ExampleTable.builder()
                 .id(0)
                 .intCol(10)
                 .stringCol("Test1")
                 .testCol(20)
-                .groupExampleTable(null)
                 .build();
         ExampleTable table2 = ExampleTable.builder()
                 .id(0)
                 .intCol(10)
                 .stringCol("Test2")
                 .testCol(15)
-                .groupExampleTable(null)
                 .build();
 
         exampleRepo.save(table);

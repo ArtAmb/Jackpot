@@ -1,9 +1,6 @@
 package jackpot.orm;
 
-import jackpot.orm.metadata.ColumnMetadata;
-import jackpot.orm.metadata.ForeignKeyRelation;
-import jackpot.orm.metadata.RelationMetadata;
-import jackpot.orm.metadata.TableMetadata;
+import jackpot.orm.metadata.*;
 import jackpot.utils.JackpotUtils;
 import jackpot.utils.Utils;
 
@@ -27,13 +24,41 @@ public class JackpotRelationSqlGenerator {
             case MANY_TO_MANY:
                 break;
             case ONE_TO_MANY:
-                break;
+                return generateOneToManyRelationSQL(relationMetadata);
             case MANY_TO_ONE:
                 return generateManyToOneRelationSQL(relationMetadata);
         }
 
 
         throw new IllegalStateException("Unrecognized relation type " + relationMetadata.getType());
+    }
+
+    private String generateOneToManyRelationSQL(RelationMetadata relationMetadata) {
+
+        TableMetadata sourceTable = allTablesMapByName.get(relationMetadata.getSourceTableName());
+        Utils.assertNotNull(sourceTable, relationMetadata.getSourceTableName() + " not found");
+
+        TableMetadata targetTable = allTablesMapByName.get(relationMetadata.getTargetTableName());
+
+        String targetFieldName = null;
+        if(sourceTable.hasColumn(relationMetadata.getSourceColumnName())) {
+            targetFieldName = getSourceColumn(sourceTable, relationMetadata).getFieldName();
+        } else {
+            targetFieldName = relationMetadata.getSourceColumnName();
+        }
+
+
+        RelationMetadata manyToOneRelation = RelationMetadata.builder()
+                .targetFieldName(targetFieldName)
+                .targetColumnName(relationMetadata.getSourceColumnName())
+                .targetTableName(relationMetadata.getSourceTableName())
+                .sourceColumnName(targetTable.getPrimaryKeyColumn().getColumnName())
+                .sourceTableName(relationMetadata.getTargetTableName())
+                .type(RelationType.MANY_TO_ONE)
+                .targetColumnNotNull(false)
+                .build();
+
+        return generateManyToOneRelationSQL(manyToOneRelation);
     }
 
     private String generateManyToOneRelationSQL(RelationMetadata relationMetadata) {

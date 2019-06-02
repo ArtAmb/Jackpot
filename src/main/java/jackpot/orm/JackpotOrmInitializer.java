@@ -187,13 +187,15 @@ public class JackpotOrmInitializer {
         });
 
         final JackpotRelationSqlGenerator jackpotRelationSqlGenerator = new JackpotRelationSqlGenerator(allTables);
-        allRelations.forEach(relationMetadata -> {
-            String sql = jackpotRelationSqlGenerator.createSql(relationMetadata);
-            Arrays.asList(sql.split(";")).forEach(oneQuery -> {
-                connectionManager.executeSql(oneQuery + ";");
-            });
+        allRelations.stream()
+                .filter(rel -> !rel.isRedundant())
+                .forEach(relationMetadata -> {
+                    String sql = jackpotRelationSqlGenerator.createSql(relationMetadata);
+                    Arrays.asList(sql.split(";")).forEach(oneQuery -> {
+                        connectionManager.executeSql(oneQuery + ";");
+                    });
 
-        });
+                });
 
         connectionManager.close();
     }

@@ -45,4 +45,8 @@ public class JackpotUtils {
 
         throw new IllegalStateException("There is no sql type for " + columnType.name());
     }
+
+    public static boolean isFieldInstanceOfClass(Field field, Class<?> class1) {
+        return class1.getName().equals(field.getType().getName());
+    }
 }

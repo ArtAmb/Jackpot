@@ -7,6 +7,7 @@ import jackpot.utils.JackpotUtils;
 
 import javax.persistence.*;
 import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +18,7 @@ public class RelationProcessor {
 
         try {
             return fieldsWithRelations.stream().map(field -> {
+                boolean redundant = isManyToOne(field);
                 Optional<Column> annotationColumn = Optional.ofNullable(field.getAnnotation(Column.class));
 
                 return RelationMetadata.builder()
@@ -27,6 +29,7 @@ public class RelationProcessor {
                         .sourceTableName(getSourceTableName(field))
                         .type(getRelationType(field))
                         .targetColumnNotNull(annotationColumn.isPresent() ? !annotationColumn.get().nullable() : false)
+                        .redundant(redundant)
                         .build();
 
             }).collect(Collectors.toList());
@@ -36,7 +39,7 @@ public class RelationProcessor {
     }
 
     private String getSourceTableName(Field field) {
-        Class<?> fieldClass = field.getType();
+        Class<?> fieldClass = getFieldClass(field);
         Entity fieldEntityAnnotation = fieldClass.getAnnotation(Entity.class);
         if (fieldEntityAnnotation == null)
             throw new IllegalStateException(String.format("%s is not an ENTITY ", fieldClass.getName()));
@@ -48,6 +51,19 @@ public class RelationProcessor {
 //        if(isAnnotateBy sth)
 //            return customFk;
 
+        if (JackpotUtils.isFieldInstanceOfClass(field, List.class)) {
+            Class<?> fieldClass = (Class<?>) ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
+            Optional<Field> fkField = Arrays.stream(fieldClass.getDeclaredFields())
+                    .filter(fi -> AnnotationUtils.isAnnotatedBy(fi, ManyToOne.class))
+                    .findFirst();
+
+            if (fkField.isPresent())
+                return JackpotUtils.getColumnName(fkField.get());
+            else
+                return fieldClass.getSimpleName() + "_FK";
+
+        }
+
         Class<?> fieldClass = field.getType();
 
         Field pkField = Arrays.stream(fieldClass.getDeclaredFields())
@@ -56,6 +72,25 @@ public class RelationProcessor {
                 .orElseThrow(() -> new IllegalStateException("There is no PK for " + fieldClass.getName()));
 
         return JackpotUtils.getColumnName(pkField);
+    }
+
+    private boolean isManyToOne(Field field) {
+        if (JackpotUtils.isFieldInstanceOfClass(field, List.class)) {
+            Class<?> fieldClass = (Class<?>) ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
+            Optional<Field> fkField = Arrays.stream(fieldClass.getDeclaredFields())
+                    .filter(fi -> AnnotationUtils.isAnnotatedBy(fi, ManyToOne.class))
+                    .findFirst();
+
+            return fkField.isPresent();
+        }
+
+        return false;
+    }
+
+    private Class<?> getFieldClass(Field field) {
+        return JackpotUtils.isFieldInstanceOfClass(field, List.class) ?
+                (Class<?>) ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0]
+                : field.getType();
     }
 
     private RelationType getRelationType(Field field) {

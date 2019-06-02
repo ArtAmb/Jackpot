@@ -17,5 +17,5 @@ public class RelationMetadata {
     String sourceTableName;
 
     boolean targetColumnNotNull;
-
+    boolean redundant;
 }
