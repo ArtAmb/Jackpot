@@ -1,5 +1,7 @@
 package jackpot.entity;
 
+import lombok.Builder;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Value;
 
@@ -10,7 +12,8 @@ import javax.persistence.OneToMany;
 import java.util.List;
 
 @Entity
-@Value
+@Data
+@Builder
 public class GroupExampleTable {
 
     @Id

@@ -3,7 +3,6 @@ package jackpot.orm.repository;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
 import jackpot.orm.ConnectionManager;
 import jackpot.orm.JackpotDatabase;
 import jackpot.orm.JackpotLogger;
@@ -11,6 +10,7 @@ import jackpot.orm.metadata.ColumnMetadata;
 import jackpot.orm.metadata.TableMetadata;
 import jackpot.utils.Utils;
 
+import java.lang.reflect.Field;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
@@ -23,7 +23,7 @@ public class JackpotSaveExecutor {
 
     private final Gson gson = new Gson();
 
-    public Object execute(String responseClassName, Object objToPersistence) throws SQLException {
+    public Object execute(String responseClassName, Object objToPersistence) throws SQLException, NoSuchFieldException, IllegalAccessException {
         TableMetadata tableMetadata = getTableMetadataByClassName(responseClassName);
         ConnectionManager connectionManager = ConnectionManager.createNew(false);
 
@@ -32,13 +32,21 @@ public class JackpotSaveExecutor {
         JackpotLogger.log(sql);
 
         connectionManager.executeSql(disableFkCheckSql);
-        connectionManager.executeSql(sql);
-        connectionManager.executeSql(enableFkCheckSql);
 
+        if (sql.substring(0, "INSERT".length()).equals("INSERT")) {
+            Object pkValue = connectionManager.executeInsertSql(sql);
+            Field declaredField = objToPersistence.getClass().getDeclaredField(tableMetadata.getPrimaryKeyColumn().getFieldName());
+            declaredField.setAccessible(true);
+            declaredField.set(objToPersistence, pkValue);
+        } else {
+            connectionManager.executeSql(sql);
+        }
+
+        connectionManager.executeSql(enableFkCheckSql);
         connectionManager.commit();
         connectionManager.close();
 
-        return null;
+        return objToPersistence;
     }
 
     private String generateSql(TableMetadata tableMetadata, JsonObject jsonObj) {
@@ -67,7 +75,7 @@ public class JackpotSaveExecutor {
         ColumnMetadata pkMetadata = tableMetadata.getPrimaryKeyColumn();
         String pkValue = tabColToValueMap.get(pkMetadata.getColumnName());
 
-        if (!Utils.isBlank(pkValue) && !pkValue.equals("'0'") && !pkValue.equals("0")) {
+        if (!Utils.isBlank(pkValue) && !pkValue.equals("'0'") && !pkValue.equals("0") && !pkValue.equals("NULL")) {
             String setSequence = tabColToValueMap.entrySet().stream()
                     .map(entrySet -> String.format("%s=%s", entrySet.getKey(), entrySet.getValue()))
                     .collect(Collectors.joining(", "));

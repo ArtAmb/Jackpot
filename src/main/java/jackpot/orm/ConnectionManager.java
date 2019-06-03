@@ -1,15 +1,16 @@
 package jackpot.orm;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import jackpot.orm.metadata.TableMetadata;
 import jackpot.orm.properties.JackpotOrmProperties;
 import lombok.val;
 import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.handlers.MapListHandler;
 
 import java.io.Closeable;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.*;
+import java.util.ArrayList;
 
 public class ConnectionManager implements Closeable {
     private final Connection connection;
@@ -44,6 +45,18 @@ public class ConnectionManager implements Closeable {
         }
     }
 
+    public Object executeInsertSql(String sql) {
+        try {
+            PreparedStatement statement = this.connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            statement.executeUpdate();
+            ResultSet rs = statement.getGeneratedKeys();
+            rs.next();
+            return rs.getInt(1);
+        } catch (SQLException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     public Object executeQuery(String sql, Class<?> responseClass) {
         try {
             val resultMap = queryRunner.query(this.connection, sql, new MapListHandler());
@@ -58,6 +71,31 @@ public class ConnectionManager implements Closeable {
             throw new IllegalStateException(e);
         }
     }
+
+//    public Object executeQuery(String sql, TableMetadata tableMetadata) {
+//        try {
+//            ArrayList<?> list = new ArrayList<>();
+//            ResultSet rs = connection.createStatement().executeQuery(sql);
+//            while (rs.next()) {
+//
+//                JsonObject jsonObject = new JsonObject();
+//
+//                for (val col : tableMetadata.getColumns()) {
+//                    if(col.getForeignKeyRelation())
+//                    jsonObject.addProperty(col.getFieldName(), rs.getString(col.getColumnName()));
+//                }
+//
+//            }
+//
+//
+//            return gson.fromJson(resultJson, arrayClass);
+//
+//        } catch (SQLException e) {
+//            throw new IllegalStateException(e);
+//        } catch (ClassNotFoundException e) {
+//            throw new IllegalStateException(e);
+//        }
+//    }
 
     public void commit() throws SQLException {
         this.connection.commit();

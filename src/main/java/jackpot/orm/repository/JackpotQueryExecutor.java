@@ -20,7 +20,13 @@ public class JackpotQueryExecutor {
         String sql = generateSql(tableMetadata, queryString, arguments);
         JackpotLogger.log(sql);
 
-        Object result = connectionManager.executeQuery(sql, tableMetadata.getTableClass());
+        Object result = null;
+        if(sql.substring(0, "DELETE".length()).equals("DELETE")) {
+            connectionManager.executeSql(sql);
+        } else {
+            result = connectionManager.executeQuery(sql, tableMetadata.getTableClass());
+        }
+
         connectionManager.close();
 
         return result;
@@ -47,6 +53,10 @@ public class JackpotQueryExecutor {
         switch (s) {
             case "find":
                 break;
+
+            case "delete":
+                return  String.format("DELETE FROM %s ",
+                        tableMetadata.getTableName());
 
             default:
                 throw new IllegalStateException("Not recognized criteria api command: " + s);

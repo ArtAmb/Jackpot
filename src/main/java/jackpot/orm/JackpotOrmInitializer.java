@@ -4,10 +4,7 @@ import jackpot.orm.metadata.RelationMetadata;
 import jackpot.orm.metadata.TableMetadata;
 import jackpot.orm.properties.DatabaseInitAction;
 import jackpot.orm.properties.JackpotOrmProperties;
-import jackpot.orm.repository.JackpotQueryExecutor;
-import jackpot.orm.repository.JackpotRepository;
-import jackpot.orm.repository.JackpotRepositoryMetadata;
-import jackpot.orm.repository.JackpotSaveExecutor;
+import jackpot.orm.repository.*;
 import org.reflections.Reflections;
 
 import javax.persistence.Entity;
@@ -26,6 +23,7 @@ public class JackpotOrmInitializer {
     private final JackpotDropTableService jackpotDropTableService = new JackpotDropTableService();
     private final JackpotQueryExecutor jackpotQueryExecutor = new JackpotQueryExecutor();
     private final JackpotSaveExecutor jackpotSaveExecutor = new JackpotSaveExecutor();
+    private final JackpotCRUDExecutor jackpotCRUDExecutor = new JackpotCRUDExecutor();
 
     volatile private boolean running = false;
 
@@ -73,7 +71,7 @@ public class JackpotOrmInitializer {
 
         Object proxyImpl = Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(), allReposArray, (proxy, method, args) -> {
 
-            System.out.println("PROXY CLASS == " + method.getDeclaringClass().getName());
+//            System.out.println("PROXY CLASS == " + method.getDeclaringClass().getName());
             String methodName = method.getName();
             if (methodName.equals("toString")) {
                 return method.getDeclaringClass().getName();
@@ -82,6 +80,15 @@ public class JackpotOrmInitializer {
 
             if (methodName.equals("save"))
                 return jackpotSaveExecutor.execute(args[0].getClass().getName(), args[0]);
+
+            if(methodName.equals("delete")){
+                jackpotCRUDExecutor.delete(args[0], args[1].getClass().getName());
+                return null;
+            }
+
+            if(methodName.equals("findOne")){
+                return jackpotCRUDExecutor.findOne(args[0], args[1].getClass().getName());
+            }
 
             return jackpotQueryExecutor.execute(methodName, repoMetadata.getTableClass().getName(), args);
         });

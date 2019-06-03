@@ -6,4 +6,6 @@ public interface ExampleRepo extends JackpotRepository<Integer, ExampleTable> {
 
     ExampleTable[] findByIntCol(Integer intCol);
 
+    void deleteByIntCol(Integer intCol);
+
 }

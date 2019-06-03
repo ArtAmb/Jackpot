@@ -1,6 +1,7 @@
 package jackpot.entity;
 
 import lombok.Builder;
+import lombok.Data;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
@@ -9,6 +10,7 @@ import javax.persistence.OneToMany;
 
 @Entity
 @Builder
+@Data
 public class ExampleTable {
 
     @Id

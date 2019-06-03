@@ -41,7 +41,7 @@ public class JackpotDatabase {
     }
 
     public TableMetadata getTableByTableName(String tableName) {
-        TableMetadata table = allTablesMapByClassName.get(tableName);
+        TableMetadata table = allTablesMapByTableName.get(tableName);
         Utils.assertNotNull(table, String.format("Table for table name %s does not exist", tableName));
 
         return table;
