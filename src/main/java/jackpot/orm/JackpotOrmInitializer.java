@@ -71,8 +71,8 @@ public class JackpotOrmInitializer {
 
         Object proxyImpl = Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(), allReposArray, (proxy, method, args) -> {
 
-            String methodName = method.getName();
 //            System.out.println("PROXY CLASS == " + method.getDeclaringClass().getName());
+            String methodName = method.getName();
             if (methodName.equals("toString")) {
                 return method.getDeclaringClass().getName();
             }
