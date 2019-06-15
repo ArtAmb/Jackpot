@@ -12,6 +12,7 @@ public class JackpotDatabase {
 
     private final Map<String, TableMetadata> allTablesMapByClassName;
     private final Map<String, TableMetadata> allTablesMapByTableName;
+    private final Map<String, TableMetadata> allTablesMapByOriginalTableName;
 
 
     synchronized public static void init(List<TableMetadata> allTables) {
@@ -31,6 +32,8 @@ public class JackpotDatabase {
                 .collect(Collectors.toMap(table -> table.getClassName(), table -> table));
         allTablesMapByTableName =  allTables.stream()
                 .collect(Collectors.toMap(table -> table.getTableName(), table -> table));
+        allTablesMapByOriginalTableName =  allTables.stream()
+                .collect(Collectors.toMap(table -> table.getTableName().toLowerCase(), table -> table));
     }
 
     public TableMetadata getTableByClassName(String className) {
@@ -46,5 +49,13 @@ public class JackpotDatabase {
 
         return table;
     }
+
+    public TableMetadata getTableByTableNameCaseInsensitive(String tableName) {
+        TableMetadata table = allTablesMapByOriginalTableName.get(tableName.toLowerCase());
+        Utils.assertNotNull(table, String.format("Table for table name %s does not exist", tableName));
+
+        return table;
+    }
+
 
 }

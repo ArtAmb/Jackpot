@@ -9,6 +9,7 @@ import jackpot.orm.metadata.TableMetadata;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class JackpotQueryExecutor {
@@ -71,6 +72,13 @@ public class JackpotQueryExecutor {
         return startSentence + joinPart;
     }
 
+    private String generateJoinSqlFromResponseTable(String tablePrefix, TableMetadata tableMetadata) {
+        StringBuffer strBuf = new StringBuffer();
+//        LinkedList<TableMetadata> relatedTables =
+
+                return strBuf.toString();
+    }
+
     private String generateJoinSql(String tablePrefix, TableMetadata tableMetadata) {
         List<ColumnMetadata> fks = tableMetadata.getColumns()
                 .stream()
@@ -81,13 +89,18 @@ public class JackpotQueryExecutor {
 
         StringBuffer strBuf = new StringBuffer();
         fks.forEach(fk -> {
+            String fkTabName = "tab" + UUID.randomUUID().toString().replaceAll("-", "");
             strBuf.append(String.format(" LEFT JOIN %s %s ON %s.%s = %s.%s ",
                     fk.getForeignKeyRelation().getTableName(),
-                    fk.getForeignKeyRelation().getTableName(),
+                    fkTabName,
                     tablePrefix,
                     fk.getColumnName(),
-                    fk.getForeignKeyRelation().getTableName(),
+                    fkTabName,
                     fk.getForeignKeyRelation().getColumnName()));
+            TableMetadata relatedTabMetadata = JackpotDatabase.getInstance()
+                    .getTableByTableNameCaseInsensitive(fk.getForeignKeyRelation().getTableName());
+
+            strBuf.append(generateJoinSql(fkTabName, relatedTabMetadata));
         });
 
 
