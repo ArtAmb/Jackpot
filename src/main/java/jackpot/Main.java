@@ -99,7 +99,7 @@ public class Main {
 
         NestedTable nestedTable1 = nestedTableRepo.save(NestedTable.builder()
                 .tmp("NESTED LEVEL 1")
-//                .nextTab(nestedTable2)
+                .nextTab(nestedTable2)
                 .build());
 
         GroupExampleTable gr1 = groupExampleTableRepo.save(GroupExampleTable.builder()

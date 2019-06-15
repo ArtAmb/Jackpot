@@ -3,7 +3,6 @@ package jackpot.orm.repository;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import jackpot.orm.ConnectionManager;
 import jackpot.orm.JackpotDatabase;
 import jackpot.orm.JackpotLogger;
 import jackpot.orm.metadata.ColumnMetadata;

@@ -1,9 +1,11 @@
-package jackpot.orm;
+package jackpot.orm.repository;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mysql.cj.result.Field;
+import jackpot.orm.JackpotDatabase;
+import jackpot.orm.metadata.ColumnMetadata;
 import jackpot.orm.metadata.RelationType;
 import jackpot.orm.metadata.TableMetadata;
 import jackpot.orm.properties.JackpotOrmProperties;
@@ -39,6 +41,7 @@ class TableToFetch {
 public class ConnectionManager implements Closeable {
     private final Connection connection;
     private final QueryRunner queryRunner = new QueryRunner();
+    private final JackpotSqlGenerator jackpotSqlGenerator = new JackpotSqlGenerator();
     private final Gson gson = new Gson();
 
 
@@ -154,8 +157,70 @@ public class ConnectionManager implements Closeable {
 //        }
 //    }
 
+
     private JsonObject toJSONObj(ResultSet rs, ResultSetMetaData metadataRS, Field[] fields, TableMetadata mainTable)
             throws SQLException {
+        HashMap<String, TmpTable> mapByTabLabel = toTmpMap(rs, metadataRS, fields);
+
+        Map<String, List<TmpTable>> mapByTabName = mapByTabLabel
+                .values().stream()
+                .collect(Collectors.groupingBy(TmpTable::getRealTableName));
+
+        JsonObject resultObj = mapByTabName.get(mainTable.getTableName().toLowerCase()).get(0).getJsonObject();
+
+        List<TableToFetch> tabsToFetch = new LinkedList<>();
+        tabsToFetch.add(TableToFetch.builder()
+                .tableMetadata(mainTable)
+                .jsonObject(resultObj)
+                .build());
+
+        while (!tabsToFetch.isEmpty()) {
+            TableToFetch tabToFetch = tabsToFetch.remove(0);
+            TableMetadata tableMetadata = tabToFetch.getTableMetadata();
+            JsonObject jsonObject = tabToFetch.getJsonObject();
+
+            tableMetadata.getColumns().stream()
+                    .filter(col -> col.getForeignKeyRelation() != null)
+                    .filter(col -> RelationType.MANY_TO_ONE.equals(col.getForeignKeyRelation().getType()))
+                    .forEach(col -> {
+
+                        if (!jsonObject.get(col.getColumnName()).isJsonNull()) {
+                            TableMetadata relatedTabMetadata = JackpotDatabase.getInstance().getTableByTableNameCaseInsensitive(col.getForeignKeyRelation().getTableName());
+                            String fkValue = jsonObject.get(col.getColumnName()).getAsString();
+
+//                            fetchLackingTables
+                            List<TmpTable> tmpTables = mapByTabName.get(col.getForeignKeyRelation().getTableName().toLowerCase());
+                            if(tmpTables == null) {
+                                mapByTabLabel.putAll(fetchLackingTables(relatedTabMetadata, col, fkValue));
+                                mapByTabName.clear();
+                                mapByTabName.putAll(mapByTabLabel.values().stream()
+                                        .collect(Collectors.groupingBy(TmpTable::getRealTableName)));
+                                tmpTables = mapByTabName.get(col.getForeignKeyRelation().getTableName().toLowerCase());
+                            }
+
+                            TmpTable relatedTab = tmpTables.stream()
+                                    .filter(tmpTab -> tmpTab.getPkValue().equalsIgnoreCase(fkValue))
+                                    .findFirst()
+                                    .orElseThrow(() ->
+                                            new IllegalStateException(String.format("There is no value table %s with id %s",
+                                                    col.getForeignKeyRelation().getTableName(), fkValue)));
+
+                            jsonObject.remove(col.getColumnName());
+                            jsonObject.add(col.getColumnName(), relatedTab.getJsonObject());
+
+
+                            tabsToFetch.add(TableToFetch.builder()
+                                    .tableMetadata(relatedTabMetadata)
+                                    .jsonObject(relatedTab.getJsonObject())
+                                    .build());
+                        }
+                    });
+        }
+
+        return resultObj;
+    }
+
+    private HashMap<String, TmpTable> toTmpMap(ResultSet rs, ResultSetMetaData metadataRS, Field[] fields) throws SQLException {
         HashMap<String, TmpTable> mapByTabLabel = new HashMap<>();
 
         int colIdx = 1;
@@ -181,52 +246,28 @@ public class ConnectionManager implements Closeable {
             ++colIdx;
         }
 
-        Map<String, List<TmpTable>> mapByTabName = mapByTabLabel
-                .values().stream()
-                .collect(Collectors.groupingBy(TmpTable::getRealTableName));
+        return mapByTabLabel;
+    }
 
-        JsonObject resultObj = mapByTabName.get(mainTable.getTableName().toLowerCase()).get(0).getJsonObject();
+    private HashMap<String, TmpTable> fetchLackingTables(TableMetadata relatedTabMetadata, ColumnMetadata col, String fkValue) {
+        String sql = jackpotSqlGenerator.generateSql(relatedTabMetadata, "findBy" + col.getForeignKeyRelation().getColumnName(), fkValue);
+        try {
+            ResultSet rs = connection.createStatement().executeQuery(sql);
+            ResultSetMetaData metadataRS = rs.getMetaData();
+            Field[] fields = ((com.mysql.cj.jdbc.result.ResultSetMetaData) metadataRS).getFields();
 
-        List<TableToFetch> tabsToFetch = new LinkedList<>();
-        tabsToFetch.add(TableToFetch.builder()
-                .tableMetadata(mainTable)
-                .jsonObject(resultObj)
-                .build());
+            if (rs.next()) {
+                return toTmpMap(rs, metadataRS, fields);
+            } else {
+                throw new IllegalStateException("Cannot fetch table " + relatedTabMetadata.getTableName() + " for FK " + fkValue);
+            }
 
-        while (!tabsToFetch.isEmpty()) {
-            TableToFetch tabToFetch = tabsToFetch.remove(0);
-            TableMetadata tableMetadata = tabToFetch.getTableMetadata();
-            JsonObject jsonObject = tabToFetch.getJsonObject();
 
-            tableMetadata.getColumns().stream()
-                    .filter(col -> col.getForeignKeyRelation() != null)
-                    .filter(col -> RelationType.MANY_TO_ONE.equals(col.getForeignKeyRelation().getType()))
-                    .forEach(col -> {
-
-                        if (!jsonObject.get(col.getColumnName()).isJsonNull()) {
-                            String fkValue = jsonObject.get(col.getColumnName()).getAsString();
-
-                            TmpTable relatedTab = mapByTabName.get(col.getForeignKeyRelation().getTableName().toLowerCase())
-                                    .stream()
-                                    .filter(tmpTab -> tmpTab.getPkValue().equalsIgnoreCase(fkValue))
-                                    .findFirst()
-                                    .orElseThrow(() ->
-                                            new IllegalStateException(String.format("There is no value table %s with id %s",
-                                                    col.getForeignKeyRelation().getTableName(), fkValue)));
-
-                            jsonObject.remove(col.getColumnName());
-                            jsonObject.add(col.getColumnName(), relatedTab.getJsonObject());
-                            TableMetadata relatedTabMetadata = JackpotDatabase.getInstance().getTableByTableNameCaseInsensitive(col.getForeignKeyRelation().getTableName());
-
-                            tabsToFetch.add(TableToFetch.builder()
-                                    .tableMetadata(relatedTabMetadata)
-                                    .jsonObject(relatedTab.getJsonObject())
-                                    .build());
-                        }
-                    });
+        } catch (SQLException e) {
+            throw new IllegalStateException(e);
         }
 
-        return resultObj;
+
     }
 
     private boolean isPK(TableMetadata tab, String colName) {

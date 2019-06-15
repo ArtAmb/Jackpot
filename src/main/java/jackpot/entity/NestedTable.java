@@ -17,6 +17,6 @@ public class NestedTable {
 
     String tmp;
 
-//    @ManyToOne
-//    NestedTable nextTab;
+    @ManyToOne
+    NestedTable nextTab;
 }

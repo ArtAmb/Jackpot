@@ -1,6 +1,7 @@
 package jackpot.orm;
 
 import jackpot.orm.metadata.TableMetadata;
+import jackpot.orm.repository.ConnectionManager;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
