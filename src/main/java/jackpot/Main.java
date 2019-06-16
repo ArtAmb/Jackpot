@@ -6,6 +6,8 @@ import jackpot.entity.*;
 import jackpot.orm.JackpotRepositoryFactory;
 import jackpot.orm.aop.JackpotOrmEnable;
 
+import java.util.List;
+
 public class Main {
 
     Gson prettyGson = new GsonBuilder().setPrettyPrinting().create();
@@ -22,31 +24,31 @@ public class Main {
                 .testStr("TEST")
                 .build());
 
-        ExampleTable table = ExampleTable.builder()
+        ExampleTable table = exampleRepo.save(ExampleTable.builder()
                 .id(0)
                 .intCol(10)
                 .stringCol("Test")
                 .testCol(741)
                 .groupExampleTable(groupExampleTable)
-                .build();
-        ExampleTable table1 = ExampleTable.builder()
+                .build());
+        ExampleTable table1 = exampleRepo.save(ExampleTable.builder()
                 .id(0)
                 .intCol(10)
                 .stringCol("Test1")
                 .testCol(20)
                 .groupExampleTable(groupExampleTable)
-                .build();
-        ExampleTable table2 = ExampleTable.builder()
+                .build());
+        ExampleTable table2 = exampleRepo.save(ExampleTable.builder()
                 .id(0)
                 .intCol(10)
                 .stringCol("Test2")
                 .testCol(15)
                 .groupExampleTable(groupExampleTable)
-                .build();
+                .build());
 
-        table = exampleRepo.save(table);
-        table1 = exampleRepo.save(table1);
-        exampleRepo.save(table2);
+        List<ExampleTable> tables = groupExampleTable.getTables();
+
+        System.out.println("GET TABLES BY LAZY LOADING == " + prettyGson.toJson(tables));
 
         ExampleTable findOneRes = exampleRepo.findOne(table1.getId(), ExampleTable.builder().build());
 

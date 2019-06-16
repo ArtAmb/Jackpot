@@ -25,6 +25,9 @@ public class EntityProcessor {
             LocalDate.class.getName(),
             LocalDateTime.class.getName());
 
+    private final static List<String> specialAspectTypes = Arrays.asList("org.aspectj.lang.JoinPoint$StaticPart",
+            "java.lang.annotation.Annotation");
+
     private final static List<Class<? extends Annotation>> relationAnnotations =
             Arrays.asList(OneToMany.class,
                     ManyToOne.class,
@@ -71,6 +74,7 @@ public class EntityProcessor {
 
     private void processRelations(Class<?> cl, Entity entityAnnotation) {
         List<Field> objectFields = Stream.of(cl.getDeclaredFields())
+                .filter(field -> isNOTSpecialAspectType(field))
                 .filter(field -> isObjectField(field))
                 .collect(Collectors.toList());
 
@@ -97,6 +101,10 @@ public class EntityProcessor {
 
     private boolean isObjectField(Field field) {
         return !standardTypes.contains(field.getType().getName());
+    }
+
+    private boolean isNOTSpecialAspectType(Field field) {
+        return !specialAspectTypes.contains(field.getType().getName());
     }
 
     private boolean hasRelationAnnotations(Field field) {
