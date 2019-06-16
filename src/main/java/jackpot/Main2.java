@@ -21,13 +21,13 @@ public class Main2 {
     void doSth() {
         GroupExampleTable tmp = GroupExampleTable.builder().build();
         tmp.getTables();
-//
-//        try {
-//            doSth1();
-//        } catch (Throwable tx) {
-//            ExampleTable[] res = exampleRepo.findByIntCol(10);
-//            System.out.println("AFTER EXCEPTION EXCEPTION -> " + prettyGson.toJson(res));
-//        }
+
+        try {
+            doSth1();
+        } catch (Throwable tx) {
+            ExampleTable[] res = exampleRepo.findByIntCol(10);
+            System.out.println("AFTER EXCEPTION EXCEPTION -> " + prettyGson.toJson(res));
+        }
     }
 
     @Transactional
