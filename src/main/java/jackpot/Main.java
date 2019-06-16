@@ -2,8 +2,6 @@ package jackpot;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import jackpot.entity.*;
 import jackpot.orm.JackpotRepositoryFactory;
 import jackpot.orm.aop.JackpotOrmEnable;
@@ -92,7 +90,6 @@ public class Main {
         }
 
 
-
         NestedTable nestedTable2 = nestedTableRepo.save(NestedTable.builder()
                 .tmp("NESTED LEVEL 2")
                 .build());
@@ -112,7 +109,6 @@ public class Main {
                 .intCol(741456)
                 .testStr("TEST2")
                 .build());
-
         ExampleManySameFKTable tmpManySameFK = exampleManySameFKTableRepo.save(ExampleManySameFKTable.builder()
                 .stringCol("MANY FK")
                 .group1(gr1)

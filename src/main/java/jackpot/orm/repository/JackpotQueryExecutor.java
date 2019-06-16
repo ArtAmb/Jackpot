@@ -10,7 +10,7 @@ public class JackpotQueryExecutor {
 
     public Object execute(String queryString, String responseClassName, Object... arguments) {
         TableMetadata tableMetadata = getTableMetadata(responseClassName);
-        ConnectionManager connectionManager = ConnectionManager.createNew();
+        ConnectionManager connectionManager = TransactionPoolManager.getConnection();
 
         String sql = generateSql(tableMetadata, queryString, arguments);
         JackpotLogger.log(sql);

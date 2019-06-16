@@ -40,16 +40,17 @@ class TableToFetch {
 
 public class ConnectionManager implements Closeable {
     private final Connection connection;
+    private Savepoint savepoint;
     private final QueryRunner queryRunner = new QueryRunner();
     private final JackpotSqlGenerator jackpotSqlGenerator = new JackpotSqlGenerator();
     private final Gson gson = new Gson();
 
 
-    public static ConnectionManager createNew() {
+    static ConnectionManager createNew() {
         return new ConnectionManager(true);
     }
 
-    public static ConnectionManager createNew(boolean autoCommit) {
+    static ConnectionManager createNew(boolean autoCommit) {
         return new ConnectionManager(autoCommit);
     }
 
@@ -62,6 +63,10 @@ public class ConnectionManager implements Closeable {
         } catch (SQLException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    public boolean isAutoCommit() throws SQLException {
+        return connection.getAutoCommit();
     }
 
     public void executeSql(String sql) {
@@ -278,12 +283,30 @@ public class ConnectionManager implements Closeable {
         this.connection.commit();
     }
 
+    public void savepoint() throws SQLException {
+        this.savepoint = this.connection.setSavepoint();
+    }
+
+    public void rollbackSavepoint() throws SQLException {
+        this.connection.releaseSavepoint(savepoint);
+    }
+
     public void rollback() throws SQLException {
         this.connection.rollback();
     }
 
     @Override
     public void close() {
+        try {
+            if(isAutoCommit()) {
+                connection.close();
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException();
+        }
+    }
+
+    void forceClose() {
         try {
             connection.close();
         } catch (SQLException e) {

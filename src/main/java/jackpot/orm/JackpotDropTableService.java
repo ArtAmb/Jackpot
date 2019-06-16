@@ -2,6 +2,7 @@ package jackpot.orm;
 
 import jackpot.orm.metadata.TableMetadata;
 import jackpot.orm.repository.ConnectionManager;
+import jackpot.orm.repository.TransactionPoolManager;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -10,7 +11,7 @@ public class JackpotDropTableService {
 
     public void dropTables(List<TableMetadata> tables) {
 
-        ConnectionManager connectionManager = ConnectionManager.createNew();
+        ConnectionManager connectionManager = TransactionPoolManager.getConnection();
         AtomicBoolean isDbDeleted = new AtomicBoolean(false);
 
         while (!isDbDeleted.get()) {

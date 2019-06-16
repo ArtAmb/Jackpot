@@ -24,7 +24,12 @@ public class JackpotSaveExecutor {
 
     public Object execute(String responseClassName, Object objToPersistence) throws SQLException, NoSuchFieldException, IllegalAccessException {
         TableMetadata tableMetadata = getTableMetadataByClassName(responseClassName);
-        ConnectionManager connectionManager = ConnectionManager.createNew(false);
+        ConnectionManager connectionManager = TransactionPoolManager.getConnection();
+
+        boolean isInTransaction = !connectionManager.isAutoCommit();
+        if(!isInTransaction) {
+            connectionManager = ConnectionManager.createNew(false);
+        }
 
         JsonObject jsonObj = gson.toJsonTree(objToPersistence).getAsJsonObject();
         String sql = generateSql(tableMetadata, jsonObj);
@@ -42,8 +47,11 @@ public class JackpotSaveExecutor {
         }
 
         connectionManager.executeSql(enableFkCheckSql);
-        connectionManager.commit();
-        connectionManager.close();
+
+        if(!isInTransaction) {
+            connectionManager.commit();
+            connectionManager.close();
+        }
 
         return objToPersistence;
     }

@@ -186,7 +186,7 @@ public class JackpotOrmInitializer {
 
     private void createDatabase() {
 
-        ConnectionManager connectionManager = ConnectionManager.createNew();
+        ConnectionManager connectionManager = TransactionPoolManager.getConnection();
 
         allTables.forEach(tableMetadata -> {
             String sql = jackpotTableSqlGenerator.createSql(tableMetadata);
