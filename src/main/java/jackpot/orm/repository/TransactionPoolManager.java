@@ -26,7 +26,9 @@ public class TransactionPoolManager {
     synchronized public void closeTransaction() {
         long threadId = Thread.currentThread().getId();
 
-        threadIDToTransactionMAP.get(threadId).getConnectionManager().forceClose();
+        ConnectionManager cm = threadIDToTransactionMAP.get(threadId).getConnectionManager();
+        cm.commit();
+        cm.forceClose();
         threadIDToTransactionMAP.remove(threadId);
     }
 

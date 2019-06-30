@@ -279,8 +279,12 @@ public class ConnectionManager implements Closeable {
         return tab.getPrimaryKeyColumn().getColumnName().toLowerCase().equals(colName.toLowerCase());
     }
 
-    public void commit() throws SQLException {
-        this.connection.commit();
+    public void commit() {
+        try {
+            this.connection.commit();
+        } catch (SQLException e) {
+            throw new IllegalStateException(e.getMessage(), e);
+        }
     }
 
     public void savepoint() throws SQLException {
