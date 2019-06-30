@@ -18,7 +18,7 @@ public class RelationProcessor {
 
         try {
             return fieldsWithRelations.stream().map(field -> {
-                boolean redundant = isManyToOne(field);
+                boolean redundant = isManyToOne(field) || isManyToMany(field);
                 Optional<Column> annotationColumn = Optional.ofNullable(field.getAnnotation(Column.class));
 
                 return RelationMetadata.builder()
@@ -75,16 +75,11 @@ public class RelationProcessor {
     }
 
     private boolean isManyToOne(Field field) {
-        if (JackpotUtils.isFieldInstanceOfClass(field, List.class)) {
-            Class<?> fieldClass = (Class<?>) ((ParameterizedType) field.getGenericType()).getActualTypeArguments()[0];
-            Optional<Field> fkField = Arrays.stream(fieldClass.getDeclaredFields())
-                    .filter(fi -> AnnotationUtils.isAnnotatedBy(fi, ManyToOne.class))
-                    .findFirst();
+        return AnnotationUtils.isRelation(field, ManyToOne.class);
+    }
 
-            return fkField.isPresent();
-        }
-
-        return false;
+    private boolean isManyToMany(Field field) {
+        return AnnotationUtils.isAnnotatedBy(field, ManyToMany.class);
     }
 
     private Class<?> getFieldClass(Field field) {

@@ -71,7 +71,6 @@ public class JackpotOrmInitializer {
 
         Object proxyImpl = Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(), allReposArray, (proxy, method, args) -> {
 
-//            System.out.println("PROXY CLASS == " + method.getDeclaringClass().getName());
             String methodName = method.getName();
             if (methodName.equals("toString")) {
                 return method.getDeclaringClass().getName();
@@ -81,12 +80,12 @@ public class JackpotOrmInitializer {
             if (methodName.equals("save"))
                 return jackpotSaveExecutor.execute(args[0].getClass().getName(), args[0]);
 
-            if(methodName.equals("delete")){
+            if (methodName.equals("delete")) {
                 jackpotCRUDExecutor.delete(args[0], args[1].getClass().getName());
                 return null;
             }
 
-            if(methodName.equals("findOne")){
+            if (methodName.equals("findOne")) {
                 return jackpotCRUDExecutor.findOne(args[0], args[1].getClass().getName());
             }
 
@@ -156,6 +155,7 @@ public class JackpotOrmInitializer {
             allTables.add(tableMetadata);
         }
 
+        allTables.addAll(entityProcessor.prepareAndGetAdditionalTables(allTables));
         allRelations.addAll(entityProcessor.getRelations());
     }
 
